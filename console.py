@@ -110,7 +110,7 @@ class HBNBCommand(cmd.Cmd):
                         print("** value missing **")
                     else:
                         setattr(storage.all()[key], words[2], words[3])
-                        storage.save()
+                        storage.all()[key].save()
 
 
 if __name__ == '__main__':
