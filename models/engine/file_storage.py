@@ -37,8 +37,9 @@ class FileStorage():
         from models.place import Place
         from models.review import Review
         from models.user import User
-        c_dict = {'Amenity': Amenity, 'City': City, 'Place': Place, 'State': State,
-                'User': User, 'BaseModel': BaseModel, 'Review': Review}
+        c_dict = {'Amenity': Amenity, 'City': City, 'Place': Place,
+                  'State': State, 'User': User, 'BaseModel': BaseModel,
+                  'Review': Review}
         return c_dict
 
     def reload(self):
@@ -48,5 +49,5 @@ class FileStorage():
             with open(file, 'r', encoding="utf-8") as f:
                 o_dict = json.load(f)
                 o_dict = {k: self.classes()[v['__class__']](**v)
-                            for k, v in o_dict.items()}
+                          for k, v in o_dict.items()}
                 FileStorage.__objects = o_dict
