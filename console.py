@@ -137,7 +137,20 @@ class HBNBCommand(cmd.Cmd):
                                 print("** value missing **")
                                 break
                             else:
-                                setattr(storage.all()[key], words[2], words[3])
+                                cast = None
+                                if not re.search('^".*"$', words[3]):
+                                    if '.' in words[3]:
+                                        cast = float
+                                    else:
+                                        cast = int
+                                else:
+                                    words[3] = words[3].replace('"', '')
+                                try:
+                                    words[3] = cast(words[3])
+                                except (TypeError, ValueError):
+                                    pass  # fine, stay a string
+                                setattr(storage.all()[key], words[2],
+                                        words[3])
                                 storage.all()[key].save()
                                 break
             if words[0] != k:
@@ -173,7 +186,7 @@ class HBNBCommand(cmd.Cmd):
                     return line
                 else:
                     return self.update_dict(command, a_dict)
-            is_atr = re.search(r'^(?:"([^"]*)")?(?:, "?([^"]*)"?)?$', string)
+            is_atr = re.search(r'^(?:"([^"]*)")?(?:, (.*))?$', string)
             if is_atr:
                 command += " {} {}".format(is_atr.group(1) or '',
                                            is_atr.group(2) or '')
