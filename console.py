@@ -4,7 +4,6 @@ Serves as the entry point of the command interpreter"""
 
 import json
 import re
-from models.engine.file_storage import FileStorage
 from models import storage
 import cmd
 
@@ -35,7 +34,7 @@ class HBNBCommand(cmd.Cmd):
         if line is None or line == "":
             print("** class name missing **")
         else:
-            for k, v in FileStorage().classes().items():
+            for k, v in storage.classes().items():
                 if line == k:
                     o = v()
                     o.save()
@@ -51,7 +50,7 @@ class HBNBCommand(cmd.Cmd):
             print("** class name missing **")
         else:
             words = line.split()
-            for k, v in FileStorage().classes().items():
+            for k, v in storage.classes().items():
                 if words[0] == k:
                     if len(words) < 2:
                         print("** instance id missing **")
@@ -73,7 +72,7 @@ class HBNBCommand(cmd.Cmd):
             print("** class name missing **")
         else:
             words = line.split(' ')
-            for k, v in FileStorage().classes().items():
+            for k, v in storage.classes().items():
                 if words[0] == k:
                     if len(words) < 2:
                         print("** instance id missing **")
@@ -120,7 +119,7 @@ class HBNBCommand(cmd.Cmd):
             print("** class name missing **")
         else:
             words = line.split(' ')
-            for k, v in FileStorage().classes().items():
+            for k, v in storage.classes().items():
                 if words[0] == k:
                     if len(words) < 2:
                         print("** instance id missing **")
@@ -156,14 +155,14 @@ class HBNBCommand(cmd.Cmd):
         method = m.group(2)
         arg = m.group(3)
         string = False
-        command = f"{method} {c_name}"
+        command = "{} {}".format(method, c_name)
         if arg != "":
             id_arg = re.search('^"([^"]*)"(?:, (.*))?$', arg)
             if not id_arg:
                 return line
             uuid = id_arg.group(1)
             string = id_arg.group(2)
-            command += f" {uuid}"
+            command += " {}".format(uuid)
 
         if method == ('update') and string:
             is_dict = re.search(r"^{.*}$", string)
@@ -176,9 +175,30 @@ class HBNBCommand(cmd.Cmd):
                     return self.update_dict(command, a_dict)
             is_atr = re.search(r'^(?:"([^"]*)")?(?:, "?([^"]*)"?)?$', string)
             if is_atr:
-                command += f" {is_atr.group(1) or ''} {is_atr.group(2) or ''}"
+                command += " {} {}".format(is_atr.group(1) or '',
+                                           is_atr.group(2) or '')
 
         return command
+
+    def update_dict(self, line, a_dict):
+        """Helper method for the update() with a dictionary."""
+        if line == "":
+            print("** class name missing **")
+        else:
+            words = line.split(' ')
+            if words[1] not in storage.classes():
+                print("** class doesn't exist **")
+            elif len(words) < 3:
+                print("** instance id missing **")
+            else:
+                key = "{}.{}".format(words[1], words[2])
+                if key not in storage.all():
+                    print("** no instance found **")
+                else:
+                    for k, v in a_dict.items():
+                        setattr(storage.all()[key], k, v)
+                    storage.all()[key].save()
+        return ""
 
 
 if __name__ == '__main__':
