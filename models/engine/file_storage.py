@@ -28,13 +28,25 @@ class FileStorage():
             o_dict = {k: v.to_dict() for k, v in FileStorage.__objects.items()}
             json.dump(o_dict, f)
 
+    def classes(self):
+        """Returns a dictionary of valid classes"""
+        from models.base_model import BaseModel
+        from models.amenity import Amenity
+        from models.city import City
+        from models.state import State
+        from models.place import Place
+        from models.review import Review
+        from models.user import User
+        c_dict = {'Amenity': Amenity, 'City': City, 'Place': Place, 'State': State,
+                'User': User, 'BaseModel': BaseModel, 'Review': Review}
+        return c_dict
+
     def reload(self):
         """Deserializes JSON file to __objects"""
-        from models.base_model import BaseModel
-
         file = FileStorage.__file_path
         if os.path.isfile(file):
             with open(file, 'r', encoding="utf-8") as f:
                 o_dict = json.load(f)
-                o_dict = {k: BaseModel(**v) for k, v in o_dict.items()}
+                o_dict = {k: self.classes()[v['__class__']](**v)
+                            for k, v in o_dict.items()}
                 FileStorage.__objects = o_dict

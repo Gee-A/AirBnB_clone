@@ -2,7 +2,9 @@
 """Module console
 Serves as the entry point of the command interpreter"""
 
-from models.base_model import BaseModel
+import json
+import re
+from models.engine.file_storage import FileStorage
 from models import storage
 import cmd
 
@@ -29,14 +31,18 @@ class HBNBCommand(cmd.Cmd):
         on success: returns id
         else: returns an error msg\n"""
 
+        o = None
         if line is None or line == "":
             print("** class name missing **")
-        elif line != 'BaseModel':
-            print("** class doesn't exist **")
         else:
-            o = BaseModel()
-            o.save()
-            print(o.id)
+            for k, v in FileStorage().classes().items():
+                if line == k:
+                    o = v()
+                    o.save()
+                    print(o.id)
+                    break
+            if line != k:
+                print("** class doesn't exist **")
 
     def do_show(self, line):
         """Prints the string representation of an instance based\
@@ -44,17 +50,22 @@ class HBNBCommand(cmd.Cmd):
         if line is None or line == "":
             print("** class name missing **")
         else:
-            words = line.split(' ')
-            if words[0] != 'BaseModel':
+            words = line.split()
+            for k, v in FileStorage().classes().items():
+                if words[0] == k:
+                    if len(words) < 2:
+                        print("** instance id missing **")
+                        break
+                    else:
+                        key = "{}.{}".format(words[0], words[1])
+                        if key not in storage.all():
+                            print("** no instance found **")
+                            break
+                        else:
+                            print(storage.all()[key])
+                            break
+            if words[0] != k:
                 print("** class doesn't exist **")
-            elif len(words) < 2:
-                print("** instance id missing **")
-            else:
-                key = "{}.{}".format(words[0], words[1])
-                if key not in storage.all():
-                    print("** no instance found **")
-                else:
-                    print(storage.all()[key])
 
     def do_destroy(self, line):
         """Deletes an instance based on the class name and id\n"""
@@ -62,24 +73,38 @@ class HBNBCommand(cmd.Cmd):
             print("** class name missing **")
         else:
             words = line.split(' ')
-            if words[0] != 'BaseModel':
+            for k, v in FileStorage().classes().items():
+                if words[0] == k:
+                    if len(words) < 2:
+                        print("** instance id missing **")
+                        break
+                    else:
+                        key = "{}.{}".format(words[0], words[1])
+                        if key not in storage.all():
+                            print("** no instance found **")
+                            break
+                        else:
+                            del(storage.all()[key])
+                            storage.save()
+                            break
+            if words[0] != k:
                 print("** class doesn't exist **")
-            elif len(words) < 2:
-                print("** instance id missing **")
-            else:
-                key = "{}.{}".format(words[0], words[1])
-                if key not in storage.all():
-                    print("** no instance found **")
-                else:
-                    del(storage.all()[key])
-                    storage.save()
+
+    def do_count(self, line):
+        """retrieves the number of instances of a class"""
+        if line is not None:
+            count = 0
+            for i in storage.all().keys():
+                if line == i.split('.')[0]:
+                    count += 1
+            print(count)
 
     def do_all(self, line):
         """Prints all string representation of all instances\
  given a class name or not\n"""
         if line != "":
             words = line.split(' ')
-            if words[0] != 'BaseModel':
+            if words[0] not in storage.classes():
                 print("** class doesn't exist **")
             else:
                 o_list = [str(obj) for key, obj in storage.all().items()
@@ -95,22 +120,65 @@ class HBNBCommand(cmd.Cmd):
             print("** class name missing **")
         else:
             words = line.split(' ')
-            if words[0] != 'BaseModel':
-                print("** class doesn't exit **")
-            elif len(words) < 2:
-                print("** instance id missing **")
-            else:
-                key = "{}.{}".format(words[0], words[1])
-                if key not in storage.all():
-                    print("** no instance found **")
-                else:
-                    if len(words) < 3:
-                        print("** attribute name missing **")
-                    elif len(words) < 4:
-                        print("** value missing **")
+            for k, v in FileStorage().classes().items():
+                if words[0] == k:
+                    if len(words) < 2:
+                        print("** instance id missing **")
+                        break
                     else:
-                        setattr(storage.all()[key], words[2], words[3])
-                        storage.all()[key].save()
+                        key = "{}.{}".format(words[0], words[1])
+                        if key not in storage.all():
+                            print("** no instance found **")
+                            break
+                        else:
+                            if len(words) < 3:
+                                print("** attribute name missing **")
+                                break
+                            elif len(words) < 4:
+                                print("** value missing **")
+                                break
+                            else:
+                                setattr(storage.all()[key], words[2], words[3])
+                                storage.all()[key].save()
+                                break
+            if words[0] != k:
+                print("** class doesn't exist **")
+
+    def precmd(self, line):
+        """Reconfigures string to the acceptable prompt formats
+        ex. <c_name>.show(<id>) translate to show <class name> <id> """
+        p = r"^(\w*)\.(\w+)(?:\(([^)]*)\))$"
+        m = re.search(p, line)
+        if not m:
+            return line
+
+        c_name = m.group(1)
+        method = m.group(2)
+        arg = m.group(3)
+        string = False
+        command = f"{method} {c_name}"
+        if arg != "":
+            id_arg = re.search('^"([^"]*)"(?:, (.*))?$', arg)
+            if not id_arg:
+                return line
+            uuid = id_arg.group(1)
+            string = id_arg.group(2)
+            command += f" {uuid}"
+
+        if method == ('update') and string:
+            is_dict = re.search(r"^{.*}$", string)
+            if is_dict:
+                try:
+                    a_dict = json.loads(string.replace("'", '"'))
+                except (ValueError, Exception):
+                    return line
+                else:
+                    return self.update_dict(command, a_dict)
+            is_atr = re.search(r'^(?:"([^"]*)")?(?:, "?([^"]*)"?)?$', string)
+            if is_atr:
+                command += f" {is_atr.group(1) or ''} {is_atr.group(2) or ''}"
+
+        return command
 
 
 if __name__ == '__main__':

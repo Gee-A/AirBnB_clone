@@ -16,6 +16,7 @@ class BaseModel():
 
         if kwargs is not None and kwargs != {}:
             for key in kwargs:
+              if key != "__class__":
                 format = "%Y-%m-%dT%H:%M:%S.%f"
                 if key == "created_at":
                     self.__dict__["created_at"] = datetime.strptime(
