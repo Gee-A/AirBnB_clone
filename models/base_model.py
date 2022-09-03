@@ -16,7 +16,6 @@ class BaseModel():
 
         if kwargs is not None and kwargs != {}:
             for key in kwargs:
-              if key != "__class__":
                 format = "%Y-%m-%dT%H:%M:%S.%f"
                 if key == "created_at":
                     self.__dict__["created_at"] = datetime.strptime(
@@ -24,7 +23,7 @@ class BaseModel():
                 elif key == "updated_at":
                     self.__dict__["updated_at"] = datetime.strptime(
                         kwargs["updated_at"], format)
-                else:
+                elif key != "__class__":
                     self.__dict__[key] = kwargs[key]
         else:
             self.id = str(uuid.uuid4())
