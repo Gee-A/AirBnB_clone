@@ -1,28 +1,48 @@
 #!/usr/bin/python3
 """Unittest module: Test BaseModel Class."""
 
+from models.engine.file_storage import FileStorage
 from models.base_model import BaseModel
+from models import storage
 from datetime import datetime
 import unittest
 import uuid
 import time
 import re
 import json
+import os
 
 
 class TestBaseModel(unittest.TestCase):
     """Test Cases for BaseModel class."""
 
+    def setUp(self):
+        """Sets up test methods."""
+        pass
+
+    def tearDown(self):
+        """Tears down test methods."""
+        self.resetStorage()
+        pass
+
+    def resetStorage(self):
+        """Resets FileStorage data."""
+        FileStorage._FileStorage__objects = {}
+        if os.path.isfile(FileStorage._FileStorage__file_path):
+            os.remove(FileStorage._FileStorage__file_path)
+
     def test_3_init_no_args(self):
         """Tests __init__ with no arguments."""
+        self.resetStorage()
         with self.assertRaises(TypeError) as e:
             BaseModel.__init__()
-        msg = "BaseModel.__init__() missing 1 required positional \
+        msg = "__init__() missing 1 required positional \
 argument: 'self'"
         self.assertEqual(str(e.exception), msg)
 
     def test_4_init_many_args(self):
         """Tests __init__ with many arguments."""
+        self.resetStorage()
         args = [i for i in range(1000)]
         o = BaseModel(*args)
 
@@ -89,17 +109,19 @@ argument: 'self'"
 
     def test_3_to_dict_no_args(self):
         """Tests to_dict() with no arguments."""
+        self.resetStorage()
         with self.assertRaises(TypeError) as e:
             BaseModel.to_dict()
-        msg = "BaseModel.to_dict() missing 1 required positional \
+        msg = "to_dict() missing 1 required positional \
 argument: 'self'"
         self.assertEqual(str(e.exception), msg)
 
     def test_3_to_dict_excess_args(self):
         """Tests to_dict() with many arguments."""
+        self.resetStorage()
         with self.assertRaises(TypeError) as e:
             BaseModel.to_dict(self, 98)
-        msg = "BaseModel.to_dict() takes 1 positional argument \
+        msg = "to_dict() takes 1 positional argument \
 but 2 were given"
         self.assertEqual(str(e.exception), msg)
 
@@ -124,3 +146,36 @@ but 2 were given"
              "float": 3.14}
         o = BaseModel(**d)
         self.assertEqual(o.to_dict(), d)
+
+    def test_5_save(self):
+        """Tests that storage.save() is called from save()."""
+        self.resetStorage()
+        o = BaseModel()
+        o.save()
+        key = "{}.{}".format(type(o).__name__, o.id)
+        d = {key: o.to_dict()}
+        self.assertTrue(os.path.isfile(FileStorage._FileStorage__file_path))
+        with open(FileStorage._FileStorage__file_path) as f:
+            self.assertEqual(len(f.read()), len(json.dumps(d)))
+            f.seek(0)
+            self.assertEqual(json.load(f), d)
+
+    def test_5_save_no_args(self):
+        """Tests save() with no arguments."""
+        self.resetStorage()
+        with self.assertRaises(TypeError) as e:
+            BaseModel.save()
+        msg = "save() missing 1 required positional argument: 'self'"
+        self.assertEqual(str(e.exception), msg)
+
+    def test_5_save_excess_args(self):
+        """Tests save() with too many arguments."""
+        self.resetStorage()
+        with self.assertRaises(TypeError) as e:
+            BaseModel.save(self, 98)
+        msg = "save() takes 1 positional argument but 2 were given"
+        self.assertEqual(str(e.exception), msg)
+
+
+if __name__ == '__main__':
+    unittest.main()
