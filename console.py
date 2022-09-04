@@ -92,11 +92,16 @@ class HBNBCommand(cmd.Cmd):
     def do_count(self, line):
         """retrieves the number of instances of a class"""
         if line is not None:
-            count = 0
-            for i in storage.all().keys():
-                if line == i.split('.')[0]:
-                    count += 1
-            print(count)
+            words = line.split(' ')
+        if not words[0]:
+            print("** class name missing **")
+        elif words[0] not in storage.classes():
+            print("** class doesn't exist **")
+        else:
+            matches = [
+                k for k in storage.all() if k.startswith(
+                    words[0] + '.')]
+            print(len(matches))
 
     def do_all(self, line):
         """Prints all string representation of all instances\
@@ -190,8 +195,13 @@ class HBNBCommand(cmd.Cmd):
             if is_atr:
                 command += " {} {}".format(is_atr.group(1) or '',
                                            is_atr.group(2) or '')
-
+        self.onecmd(command)
         return command
+
+    def default(self, line):
+        """Catch commands if nothing else matches then."""
+        # print("DEF:::", line)
+        self.precmd(line)
 
     def update_dict(self, line, a_dict):
         """Helper method for the update() with a dictionary."""
