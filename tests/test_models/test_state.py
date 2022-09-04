@@ -34,7 +34,6 @@ class TestCity(unittest.TestCase):
     def test_attr(self):
         """ test model attributes """
         self.assertEqual(hasattr(self.ins, "name"), True)
-        self.assertEqual(hasattr(self.ins, "state_id"), True)
 
     def test_type(self):
         """ test type of object """
